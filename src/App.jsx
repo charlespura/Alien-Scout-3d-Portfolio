@@ -43,7 +43,7 @@ const projects = [
 
 const modelPath = `${import.meta.env.BASE_URL}models/Meshy_AI_A_Scout_from_an_alien_0331090602_texture.glb`
 
-const stagePresets = {
+const desktopStagePresets = {
   hero: {
     camera: [0, 1.35, 4.8],
     target: [0, 0.15, 0],
@@ -76,7 +76,42 @@ const stagePresets = {
   },
 }
 
-function AlienModel({ activeSection }) {
+const mobileStagePresets = {
+  hero: {
+    camera: [0, 1.2, 6.1],
+    target: [0, 0.1, 0],
+    modelPosition: [0, -1.82, 0],
+    modelRotationY: 0.18,
+  },
+  about: {
+    camera: [1.35, 0.75, 3.85],
+    target: [0, 0.2, 0],
+    modelPosition: [0, -0.94, 0],
+    modelRotationY: 0.02,
+  },
+  tech: {
+    camera: [1.45, 0.72, 3.95],
+    target: [0, 0.24, 0],
+    modelPosition: [0, -1.7, 0],
+    modelRotationY: -0.42,
+  },
+  projects: {
+    camera: [0.25, -0.18, 3.2],
+    target: [0, -0.85, 0],
+    modelPosition: [0, -1.72, 0],
+    modelRotationY: 0.52,
+  },
+  contact: {
+    camera: [-1, 0.92, 3.95],
+    target: [0, 0.12, 0],
+    modelPosition: [0, -1.72, 0],
+    modelRotationY: 0.9,
+  },
+}
+
+const MotionArticle = motion.article
+
+function AlienModel({ activeSection, stagePresets }) {
   const { scene } = useGLTF(modelPath)
   const modelRef = useRef(null)
 
@@ -90,7 +125,7 @@ function AlienModel({ activeSection }) {
     ])
 
     return Object.fromEntries(entries)
-  }, [])
+  }, [stagePresets])
 
   useFrame((_, delta) => {
     const preset = vectors[activeSection] || vectors.hero
@@ -108,7 +143,7 @@ function AlienModel({ activeSection }) {
   )
 }
 
-function CinematicRig({ activeSection }) {
+function CinematicRig({ activeSection, stagePresets }) {
   const { camera } = useThree()
   const lookAtRef = useRef(new THREE.Vector3(0, 0.15, 0))
 
@@ -122,7 +157,7 @@ function CinematicRig({ activeSection }) {
     ])
 
     return Object.fromEntries(entries)
-  }, [])
+  }, [stagePresets])
 
   useFrame((_, delta) => {
     const preset = vectors[activeSection] || vectors.hero
@@ -137,11 +172,11 @@ function CinematicRig({ activeSection }) {
   return null
 }
 
-function Stage({ activeSection }) {
+function Stage({ activeSection, stagePresets, isMobile }) {
   return (
     <Canvas
-      camera={{ position: stagePresets.hero.camera, fov: 42 }}
-      dpr={[0.75, 1.2]}
+      camera={{ position: stagePresets.hero.camera, fov: isMobile ? 50 : 42 }}
+      dpr={isMobile ? [0.6, 1] : [0.75, 1.2]}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: true }}
       performance={{ min: 0.4 }}
     >
@@ -153,12 +188,12 @@ function Stage({ activeSection }) {
       <directionalLight position={[0.5, -1.5, 1]} intensity={0.45} color="#e6a23d" />
 
       <Suspense fallback={null}>
-        <AlienModel activeSection={activeSection} />
+        <AlienModel activeSection={activeSection} stagePresets={stagePresets} />
       </Suspense>
 
       <ContactShadows position={[0, -1.7, 0]} opacity={0.45} scale={7.2} blur={1.7} frames={1} />
       <AdaptiveDpr pixelated />
-      <CinematicRig activeSection={activeSection} />
+      <CinematicRig activeSection={activeSection} stagePresets={stagePresets} />
     </Canvas>
   )
 }
@@ -176,18 +211,19 @@ function Pill({ children, className }) {
   )
 }
 
-function SectionCard({ id, title, subtitle, children, className = '' }) {
+function SectionCard({ id, title, subtitle, children, className = '', scrollMarginTop }) {
   const isRight = className.includes('section-right')
 
   return (
     <section
       id={id}
       className={cn(
-        'scroll-mt-24 flex min-h-[78vh] items-center',
+        'flex min-h-[72vh] items-center md:min-h-[78vh]',
         isRight ? 'justify-end' : 'justify-start',
       )}
+      style={{ scrollMarginTop }}
     >
-      <motion.article
+      <MotionArticle
         initial={{ opacity: 0, y: 26 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.35 }}
@@ -200,15 +236,19 @@ function SectionCard({ id, title, subtitle, children, className = '' }) {
         <h2 className="text-3xl text-white md:text-4xl">{title}</h2>
         {subtitle ? <p className="mt-2 max-w-2xl text-slate-200/90">{subtitle}</p> : null}
         <div className="mt-5">{children}</div>
-      </motion.article>
+      </MotionArticle>
     </section>
   )
 }
 
 function App() {
   const [activeSection, setActiveSection] = useState('hero')
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  const [headerHeight, setHeaderHeight] = useState(96)
   const manualSectionRef = useRef(null)
   const manualTimerRef = useRef(null)
+  const headerRef = useRef(null)
+  const stagePresets = isMobile ? mobileStagePresets : desktopStagePresets
 
   useEffect(() => {
     const heroAnim = gsap.timeline()
@@ -221,13 +261,42 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const onMediaChange = (event) => setIsMobile(event.matches)
+    mediaQuery.addEventListener('change', onMediaChange)
+
+    return () => mediaQuery.removeEventListener('change', onMediaChange)
+  }, [])
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (!headerRef.current) return
+      setHeaderHeight(Math.ceil(headerRef.current.getBoundingClientRect().height))
+    }
+
+    updateHeaderHeight()
+
+    let resizeObserver
+    if ('ResizeObserver' in window && headerRef.current) {
+      resizeObserver = new ResizeObserver(() => updateHeaderHeight())
+      resizeObserver.observe(headerRef.current)
+    }
+
+    window.addEventListener('resize', updateHeaderHeight)
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight)
+      if (resizeObserver) resizeObserver.disconnect()
+    }
+  }, [])
+
+  useEffect(() => {
     const sectionIds = navItems.map((item) => item.id)
     let ticking = false
 
     const updateActiveSection = () => {
       if (manualSectionRef.current) return
 
-      const viewportAnchor = window.innerHeight * 0.35
+      const viewportAnchor = window.innerHeight * (isMobile ? 0.46 : 0.35)
       let closestId = 'hero'
       let closestDistance = Number.POSITIVE_INFINITY
 
@@ -266,7 +335,7 @@ function App() {
       window.removeEventListener('resize', onScrollOrResize)
       if (manualTimerRef.current) clearTimeout(manualTimerRef.current)
     }
-  }, [])
+  }, [isMobile])
 
   const jumpTo = (id) => {
     const target = document.getElementById(id)
@@ -279,25 +348,25 @@ function App() {
     }, 700)
 
     setActiveSection(id)
-    const headerOffset = 96
+    const headerOffset = headerHeight + 16
     const top = window.scrollY + target.getBoundingClientRect().top - headerOffset
     window.scrollTo({ top, behavior: 'smooth' })
   }
 
   return (
     <main className="relative min-h-screen">
-      <header className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-slate-950/65 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 md:px-8">
+      <header ref={headerRef} className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-slate-950/65 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-8">
           <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/95">
             <Sparkles size={14} /> Charles Pura Portfolio
           </div>
-          <nav className="flex flex-wrap justify-end gap-2 md:gap-3">
+          <nav className="flex w-full gap-2 overflow-x-auto pb-1 md:w-auto md:flex-wrap md:justify-end md:gap-3 md:overflow-visible md:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => jumpTo(item.id)}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition md:px-4',
+                  'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition md:px-4',
                   activeSection === item.id
                     ? 'border-amber-300/60 bg-amber-300/15 text-amber-200'
                     : 'border-white/20 bg-white/5 text-slate-100 hover:bg-white/10',
@@ -310,13 +379,17 @@ function App() {
         </div>
       </header>
 
-      <div className="pointer-events-none fixed inset-0 top-16 z-10">
-        <Stage activeSection={activeSection} />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10" style={{ top: headerHeight }}>
+        <Stage activeSection={activeSection} stagePresets={stagePresets} isMobile={isMobile} />
       </div>
 
-      <div className="pointer-events-none relative z-20 mx-auto w-full max-w-7xl px-4 pb-16 pt-24 md:px-8">
+      <div
+        className="pointer-events-none relative z-20 mx-auto w-full max-w-7xl px-4 pb-16 md:px-8"
+        style={{ paddingTop: headerHeight + 16 }}
+      >
         <SectionCard
           id="hero"
+          scrollMarginTop={headerHeight + 16}
           title="Charles Pura"
           subtitle="Tekken-style cinematic stage: scroll or use the navbar to drive camera movement around the character."
         >
@@ -337,6 +410,7 @@ function App() {
 
         <SectionCard
           id="about"
+          scrollMarginTop={headerHeight + 16}
           title="About"
           subtitle="This section zooms into the face area for a dramatic character-intro vibe."
           className="section-right"
@@ -349,6 +423,7 @@ function App() {
 
         <SectionCard
           id="tech"
+          scrollMarginTop={headerHeight + 16}
           title="Tech Stack"
           subtitle="Camera shifts to a tighter angle while showing the tools used to build this project."
         >
@@ -361,6 +436,7 @@ function App() {
 
         <SectionCard
           id="projects"
+          scrollMarginTop={headerHeight + 16}
           title="Projects"
           subtitle="Camera drops lower to highlight the feet/lower-body like a character detail pass."
           className="section-right"
@@ -377,6 +453,7 @@ function App() {
 
         <SectionCard
           id="contact"
+          scrollMarginTop={headerHeight + 16}
           title="Contact"
           subtitle="Final camera swing before call-to-action."
           className="mb-8"
