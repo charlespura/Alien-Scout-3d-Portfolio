@@ -80,6 +80,24 @@ function AlienModel({ activeSection }) {
   const { scene } = useGLTF(modelPath)
   const modelRef = useRef(null)
 
+  const normalized = useMemo(() => {
+    const cloned = scene.clone(true)
+    const box = new THREE.Box3().setFromObject(cloned)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+
+    const maxDim = Math.max(size.x, size.y, size.z) || 1
+    const autoScale = 3.6 / maxDim
+
+    return {
+      cloned,
+      autoScale,
+      offset: [-center.x, -box.min.y, -center.z],
+    }
+  }, [scene])
+
   const vectors = useMemo(() => {
     const entries = Object.entries(stagePresets).map(([key, value]) => [
       key,
@@ -106,7 +124,9 @@ function AlienModel({ activeSection }) {
   return (
     <Float speed={1.1} rotationIntensity={0.15} floatIntensity={0.3}>
       <group ref={modelRef}>
-        <primitive object={scene} scale={2.1} />
+        <group scale={normalized.autoScale}>
+          <primitive object={normalized.cloned} position={normalized.offset} />
+        </group>
       </group>
     </Float>
   )
