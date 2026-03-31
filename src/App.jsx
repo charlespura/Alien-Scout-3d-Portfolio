@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { AdaptiveDpr, ContactShadows, Float, useGLTF } from '@react-three/drei'
+import { AdaptiveDpr, ContactShadows, useGLTF } from '@react-three/drei'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import * as THREE from 'three'
@@ -92,23 +92,19 @@ function AlienModel({ activeSection }) {
     return Object.fromEntries(entries)
   }, [])
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const preset = vectors[activeSection] || vectors.hero
     if (!modelRef.current || !preset) return
 
     const ease = 1 - Math.exp(-4 * delta)
     modelRef.current.position.lerp(preset.position, ease)
     modelRef.current.rotation.y = THREE.MathUtils.damp(modelRef.current.rotation.y, preset.rotationY, 5, delta)
-
-    modelRef.current.position.y += Math.sin(state.clock.elapsedTime * 1.1) * 0.0018
   })
 
   return (
-    <Float speed={1.1} rotationIntensity={0.15} floatIntensity={0.3}>
-      <group ref={modelRef}>
-        <primitive object={scene} scale={2.1} />
-      </group>
-    </Float>
+    <group ref={modelRef}>
+      <primitive object={scene} scale={2.1} />
+    </group>
   )
 }
 
@@ -145,9 +141,9 @@ function Stage({ activeSection }) {
   return (
     <Canvas
       camera={{ position: stagePresets.hero.camera, fov: 42 }}
-      dpr={[1, 1.4]}
+      dpr={[0.75, 1.2]}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: true }}
-      performance={{ min: 0.6 }}
+      performance={{ min: 0.4 }}
     >
       <fog attach="fog" args={['#0b1420', 4, 9]} />
 
