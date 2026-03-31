@@ -1,10 +1,19 @@
-import { Suspense, useEffect, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Float, OrbitControls, useGLTF } from '@react-three/drei'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { AdaptiveDpr, ContactShadows, Float, useGLTF } from '@react-three/drei'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
+import * as THREE from 'three'
 import { ArrowRight, Mail, Sparkles } from 'lucide-react'
 import { cn } from './lib/utils'
+
+const navItems = [
+  { id: 'hero', label: 'Intro' },
+  { id: 'about', label: 'About' },
+  { id: 'tech', label: 'Tech Stack' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'contact', label: 'Contact' },
+]
 
 const skills = [
   'React',
@@ -14,33 +23,146 @@ const skills = [
   'Framer Motion',
   'GSAP',
   'Tailwind CSS',
-  'UI / UX Design',
+  'shadcn-style UI',
 ]
 
 const projects = [
   {
     title: 'Alien Scout Experience',
-    description:
-      'Interactive hero scene with real-time lighting, smooth camera controls, and cinematic reveal animations.',
+    description: 'Realtime hero scene with directional lights, shadow grounding, and cinematic entrance timing.',
   },
   {
-    title: 'Scroll Motion Lab',
-    description:
-      'Scroll-aware transitions and element choreography built with GSAP + Framer Motion for story-like flow.',
+    title: 'Scroll Combat Camera',
+    description: 'Section-driven camera animation that reacts to page position like a game character inspection mode.',
   },
   {
-    title: 'Realtime Product Showcase',
-    description:
-      'A reusable 3D product stage for portfolios and landing pages with responsive desktop/mobile controls.',
+    title: 'Interactive Showcase Engine',
+    description: 'Portfolio architecture that can swap characters/models while keeping the same motion rig.',
   },
 ]
 
-function AlienModel() {
+const stagePresets = {
+  hero: {
+    camera: [0, 1.35, 4.8],
+    target: [0, 0.15, 0],
+    modelPosition: [0, -1.65, 0],
+    modelRotationY: 0.18,
+  },
+  about: {
+    camera: [1.65, 0.68, 2.75],
+    target: [0, 0.25, 0],
+    modelPosition: [0, -0.86, 0],
+    modelRotationY: 0.02,
+  },
+  tech: {
+    camera: [1.65, 0.68, 2.75],
+    target: [0, 0.25, 0],
+    modelPosition: [0, -1.65, 0],
+    modelRotationY: -0.45,
+  },
+  projects: {
+    camera: [0.2, -0.42, 2.35],
+    target: [0, -1.2, 0],
+    modelPosition: [0, -1.68, 0],
+    modelRotationY: 0.55,
+  },
+  contact: {
+    camera: [-1.2, 0.9, 3.25],
+    target: [0, 0.15, 0],
+    modelPosition: [0, -1.65, 0],
+    modelRotationY: 0.92,
+  },
+}
+
+function AlienModel({ activeSection }) {
   const { scene } = useGLTF('/models/Meshy_AI_A_Scout_from_an_alien_0331090602_texture.glb')
+  const modelRef = useRef(null)
+
+  const vectors = useMemo(() => {
+    const entries = Object.entries(stagePresets).map(([key, value]) => [
+      key,
+      {
+        position: new THREE.Vector3(...value.modelPosition),
+        rotationY: value.modelRotationY,
+      },
+    ])
+
+    return Object.fromEntries(entries)
+  }, [])
+
+  useFrame((state, delta) => {
+    const preset = vectors[activeSection] || vectors.hero
+    if (!modelRef.current || !preset) return
+
+    const ease = 1 - Math.exp(-4 * delta)
+    modelRef.current.position.lerp(preset.position, ease)
+    modelRef.current.rotation.y = THREE.MathUtils.damp(modelRef.current.rotation.y, preset.rotationY, 5, delta)
+
+    modelRef.current.position.y += Math.sin(state.clock.elapsedTime * 1.1) * 0.0018
+  })
+
   return (
-    <Float speed={1.4} rotationIntensity={0.6} floatIntensity={0.8}>
-      <primitive object={scene} scale={2.1} position={[0, -1.65, 0]} />
+    <Float speed={1.1} rotationIntensity={0.15} floatIntensity={0.3}>
+      <group ref={modelRef}>
+        <primitive object={scene} scale={2.1} />
+      </group>
     </Float>
+  )
+}
+
+function CinematicRig({ activeSection }) {
+  const { camera } = useThree()
+  const lookAtRef = useRef(new THREE.Vector3(0, 0.15, 0))
+
+  const vectors = useMemo(() => {
+    const entries = Object.entries(stagePresets).map(([key, value]) => [
+      key,
+      {
+        camera: new THREE.Vector3(...value.camera),
+        target: new THREE.Vector3(...value.target),
+      },
+    ])
+
+    return Object.fromEntries(entries)
+  }, [])
+
+  useFrame((_, delta) => {
+    const preset = vectors[activeSection] || vectors.hero
+    if (!preset) return
+
+    const ease = 1 - Math.exp(-3.8 * delta)
+    camera.position.lerp(preset.camera, ease)
+    lookAtRef.current.lerp(preset.target, ease)
+    camera.lookAt(lookAtRef.current)
+  })
+
+  return null
+}
+
+function Stage({ activeSection }) {
+  return (
+    <Canvas
+      camera={{ position: stagePresets.hero.camera, fov: 42 }}
+      dpr={[1, 1.4]}
+      gl={{ antialias: false, powerPreference: 'high-performance' }}
+      performance={{ min: 0.6 }}
+    >
+      <color attach="background" args={['#0a101a']} />
+      <fog attach="fog" args={['#0a101a', 4, 9]} />
+
+      <ambientLight intensity={0.7} />
+      <spotLight position={[2.8, 5, 3]} angle={0.45} penumbra={0.8} intensity={2.4} color="#f4f8ff" />
+      <directionalLight position={[-2.2, 1.8, -2.5]} intensity={0.8} color="#5ac5b1" />
+      <directionalLight position={[0.5, -1.5, 1]} intensity={0.45} color="#e6a23d" />
+
+      <Suspense fallback={null}>
+        <AlienModel activeSection={activeSection} />
+      </Suspense>
+
+      <ContactShadows position={[0, -1.7, 0]} opacity={0.45} scale={7.2} blur={1.7} frames={1} />
+      <AdaptiveDpr pixelated />
+      <CinematicRig activeSection={activeSection} />
+    </Canvas>
   )
 }
 
@@ -48,7 +170,7 @@ function Pill({ children, className }) {
   return (
     <span
       className={cn(
-        'rounded-full border border-emerald-300/30 bg-emerald-200/10 px-4 py-1.5 text-sm font-medium text-emerald-100 backdrop-blur',
+        'rounded-full border border-emerald-300/30 bg-emerald-200/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-emerald-100 md:text-sm',
         className,
       )}
     >
@@ -57,169 +179,217 @@ function Pill({ children, className }) {
   )
 }
 
+function SectionCard({ id, title, subtitle, children, className = '' }) {
+  return (
+    <section id={id} className="scroll-mt-24 min-h-[68vh] md:min-h-[74vh]">
+      <motion.article
+        initial={{ opacity: 0, y: 26 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.35 }}
+        transition={{ duration: 0.55 }}
+        className={cn(
+          'rounded-2xl border border-white/15 bg-slate-950/55 p-6 shadow-xl shadow-black/30 backdrop-blur-lg md:p-8',
+          className,
+        )}
+      >
+        <h2 className="text-3xl text-white md:text-4xl">{title}</h2>
+        {subtitle ? <p className="mt-2 max-w-2xl text-slate-200/90">{subtitle}</p> : null}
+        <div className="mt-5">{children}</div>
+      </motion.article>
+    </section>
+  )
+}
+
 function App() {
-  const heroRef = useRef(null)
+  const [activeSection, setActiveSection] = useState('hero')
+  const manualSectionRef = useRef(null)
+  const manualTimerRef = useRef(null)
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from('.intro-chip', { y: 26, opacity: 0, duration: 0.7, ease: 'power2.out' })
-      gsap.from('.intro-title', {
-        y: 38,
-        opacity: 0,
-        duration: 0.9,
-        delay: 0.15,
-        ease: 'power3.out',
-      })
-      gsap.from('.intro-copy', {
-        y: 24,
-        opacity: 0,
-        duration: 0.8,
-        delay: 0.35,
-        ease: 'power2.out',
-      })
-      gsap.from('.intro-actions', {
-        y: 16,
-        opacity: 0,
-        duration: 0.6,
-        delay: 0.45,
-        ease: 'power2.out',
-      })
-    }, heroRef)
+    const heroAnim = gsap.timeline()
+    heroAnim
+      .from('.hud-chip', { y: 20, opacity: 0, duration: 0.4, ease: 'power2.out' })
+      .from('.hud-title', { y: 34, opacity: 0, duration: 0.65, ease: 'power3.out' }, '-=0.2')
+      .from('.hud-copy', { y: 22, opacity: 0, duration: 0.5, ease: 'power2.out' }, '-=0.35')
 
-    return () => ctx.revert()
+    return () => heroAnim.kill()
   }, [])
 
+  useEffect(() => {
+    const sectionIds = navItems.map((item) => item.id)
+    let ticking = false
+
+    const updateActiveSection = () => {
+      if (manualSectionRef.current) return
+
+      const viewportAnchor = window.innerHeight * 0.35
+      let closestId = 'hero'
+      let closestDistance = Number.POSITIVE_INFINITY
+
+      sectionIds.forEach((id) => {
+        const element = document.getElementById(id)
+        if (!element) return
+
+        const rect = element.getBoundingClientRect()
+        const elementAnchor = rect.top + rect.height * 0.25
+        const distance = Math.abs(elementAnchor - viewportAnchor)
+
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestId = id
+        }
+      })
+
+      setActiveSection((prev) => (prev === closestId ? prev : closestId))
+    }
+
+    const onScrollOrResize = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        updateActiveSection()
+        ticking = false
+      })
+    }
+
+    updateActiveSection()
+    window.addEventListener('scroll', onScrollOrResize, { passive: true })
+    window.addEventListener('resize', onScrollOrResize)
+
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize)
+      window.removeEventListener('resize', onScrollOrResize)
+      if (manualTimerRef.current) clearTimeout(manualTimerRef.current)
+    }
+  }, [])
+
+  const jumpTo = (id) => {
+    const target = document.getElementById(id)
+    if (!target) return
+
+    manualSectionRef.current = id
+    if (manualTimerRef.current) clearTimeout(manualTimerRef.current)
+    manualTimerRef.current = setTimeout(() => {
+      manualSectionRef.current = null
+    }, 700)
+
+    setActiveSection(id)
+    const headerOffset = 96
+    const top = window.scrollY + target.getBoundingClientRect().top - headerOffset
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
+
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-8 md:px-10 md:py-12">
-      <section
-        ref={heroRef}
-        className="relative overflow-hidden rounded-3xl border border-white/15 bg-slate-950/40 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl md:p-10"
-      >
-        <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-0 h-60 w-60 rounded-full bg-amber-300/20 blur-3xl" />
-
-        <div className="grid items-center gap-8 lg:grid-cols-2">
-          <div>
-            <Pill className="intro-chip inline-flex items-center gap-2">
-              <Sparkles size={14} /> 3D PORTFOLIO
-            </Pill>
-
-            <h1 className="intro-title mt-4 text-4xl leading-tight text-white md:text-6xl">
-              Alien Scout
-              <span className="block text-emerald-300">Creative Developer</span>
-            </h1>
-
-            <p className="intro-copy mt-4 max-w-xl text-base text-slate-200/90 md:text-lg">
-              A cinematic React + Three.js portfolio that blends realtime 3D visuals with smooth motion systems for
-              a modern showcase experience.
-            </p>
-
-            <div className="intro-actions mt-6 flex flex-wrap gap-3">
-              <a
-                href="#projects"
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-5 py-2.5 font-semibold text-slate-900 transition hover:bg-emerald-200"
-              >
-                View Projects <ArrowRight size={16} />
-              </a>
-              <a
-                href="#contact"
-                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-5 py-2.5 font-semibold text-white transition hover:bg-white/10"
-              >
-                Contact Me <Mail size={16} />
-              </a>
-            </div>
+    <main className="relative min-h-screen">
+      <header className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-slate-950/65 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 md:px-8">
+          <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/95">
+            <Sparkles size={14} /> Battle Portfolio
           </div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.25, duration: 0.8, ease: 'easeOut' }}
-            className="h-[360px] rounded-2xl border border-white/10 bg-slate-900/80 md:h-[480px]"
-          >
-            <Canvas camera={{ position: [0, 1.6, 4.8], fov: 42 }}>
-              <ambientLight intensity={0.65} />
-              <directionalLight position={[2, 5, 3]} intensity={1.3} />
-              <directionalLight position={[-2, 2, -2]} intensity={0.45} color="#6dcdb0" />
-              <Suspense fallback={null}>
-                <AlienModel />
-              </Suspense>
-              <ContactShadows position={[0, -1.65, 0]} opacity={0.45} scale={8} blur={2.4} />
-              <OrbitControls enablePan={false} minDistance={3.6} maxDistance={7} />
-            </Canvas>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="mt-8 grid gap-6 md:grid-cols-2">
-        <motion.article
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.65 }}
-          className="rounded-2xl border border-white/12 bg-slate-950/45 p-6 backdrop-blur"
-        >
-          <h2 className="text-2xl text-white">Tech Stack</h2>
-          <p className="mt-2 text-slate-200/85">Built using the tools you requested:</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {skills.map((skill) => (
-              <Pill key={skill}>{skill}</Pill>
+          <nav className="flex flex-wrap justify-end gap-2 md:gap-3">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => jumpTo(item.id)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition md:px-4',
+                  activeSection === item.id
+                    ? 'border-amber-300/60 bg-amber-300/15 text-amber-200'
+                    : 'border-white/20 bg-white/5 text-slate-100 hover:bg-white/10',
+                )}
+              >
+                {item.label}
+              </button>
             ))}
-          </div>
-        </motion.article>
-
-        <motion.article
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ delay: 0.1, duration: 0.65 }}
-          className="rounded-2xl border border-white/12 bg-slate-950/45 p-6 backdrop-blur"
-        >
-          <h2 className="text-2xl text-white">About</h2>
-          <p className="mt-2 text-slate-200/90">
-            I build immersive, high-impact web experiences that combine interactive 3D storytelling, smooth animations,
-            and production-ready frontend engineering.
-          </p>
-          <a
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-300/40 px-4 py-2 font-semibold text-amber-200 transition hover:bg-amber-200/10"
-            href="#"
-          >
-            Portfolio Source
-          </a>
-        </motion.article>
-      </section>
-
-      <section id="projects" className="mt-10">
-        <h2 className="text-3xl text-white">Featured Projects</h2>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {projects.map((project, index) => (
-            <motion.article
-              key={project.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: index * 0.1, duration: 0.55 }}
-              className="rounded-2xl border border-white/12 bg-black/30 p-5"
-            >
-              <h3 className="text-xl text-emerald-200">{project.title}</h3>
-              <p className="mt-2 text-sm text-slate-200/90">{project.description}</p>
-            </motion.article>
-          ))}
+          </nav>
         </div>
-      </section>
+      </header>
 
-      <section id="contact" className="mt-10 mb-4 rounded-2xl border border-white/12 bg-slate-950/45 p-6 backdrop-blur">
-        <h2 className="text-3xl text-white">Let&apos;s Build Something Bold</h2>
-        <p className="mt-2 max-w-2xl text-slate-200/90">
-          Looking for a standout interactive website or product presentation? Let&apos;s collaborate and bring your vision
-          to life with React and modern 3D web tech.
-        </p>
-        <a
-          href="mailto:hello@example.com"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-amber-300 px-5 py-2.5 font-semibold text-slate-900 transition hover:bg-amber-200"
-        >
-          <Mail size={16} /> hello@example.com
-        </a>
-      </section>
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-16 pt-24 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-8">
+        <div className="space-y-6">
+          <SectionCard
+            id="hero"
+            title="Alien Scout"
+            subtitle="Tekken-style cinematic stage: scroll or use the navbar to drive camera movement around the character."
+          >
+            <Pill className="hud-chip mb-3">3D Scroll Camera System</Pill>
+            <p className="hud-title text-2xl font-bold leading-tight text-white md:text-3xl">
+              A game-like portfolio where each section triggers a different character focus.
+            </p>
+            <p className="hud-copy mt-3 max-w-xl text-slate-200/90">
+              Intro = full body, About = face zoom, Tech Stack = tactical side zoom, Projects = feet/lower-body focus.
+            </p>
+            <button
+              onClick={() => jumpTo('projects')}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-emerald-200"
+            >
+              Start Mission <ArrowRight size={15} />
+            </button>
+          </SectionCard>
+
+          <SectionCard
+            id="about"
+            title="About"
+            subtitle="This section zooms into the face area for a dramatic character-intro vibe."
+          >
+            <p className="max-w-2xl text-slate-200/90">
+              I build immersive web interfaces with cinematic motion, strong art direction, and production-ready React
+              architecture.
+            </p>
+          </SectionCard>
+
+          <SectionCard
+            id="tech"
+            title="Tech Stack"
+            subtitle="Camera shifts to a tighter angle while showing the tools used to build this project."
+          >
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill) => (
+                <Pill key={skill}>{skill}</Pill>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            id="projects"
+            title="Projects"
+            subtitle="Camera drops lower to highlight the feet/lower-body like a character detail pass."
+          >
+            <div className="grid gap-3">
+              {projects.map((project) => (
+                <article key={project.title} className="rounded-xl border border-white/15 bg-black/25 p-4">
+                  <h3 className="text-lg font-bold text-emerald-200">{project.title}</h3>
+                  <p className="mt-1 text-sm text-slate-200/90">{project.description}</p>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            id="contact"
+            title="Contact"
+            subtitle="Final camera swing before call-to-action."
+            className="mb-8"
+          >
+            <p className="max-w-xl text-slate-200/90">Let&apos;s build a bold interactive experience together.</p>
+            <a
+              href="mailto:hello@example.com"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200"
+            >
+              <Mail size={15} /> hello@example.com
+            </a>
+          </SectionCard>
+        </div>
+
+        <aside className="lg:sticky lg:top-24 lg:h-[calc(100vh-7.5rem)]">
+          <div className="h-[52vh] overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 shadow-2xl shadow-black/40 md:h-[60vh] lg:h-full">
+            <Stage activeSection={activeSection} />
+          </div>
+          <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-300/80">
+            Active camera target: <span className="font-semibold text-emerald-200">{activeSection}</span>
+          </p>
+        </aside>
+      </div>
     </main>
   )
 }
