@@ -144,11 +144,10 @@ function Stage({ activeSection }) {
     <Canvas
       camera={{ position: stagePresets.hero.camera, fov: 42 }}
       dpr={[1, 1.4]}
-      gl={{ antialias: false, powerPreference: 'high-performance' }}
+      gl={{ antialias: false, powerPreference: 'high-performance', alpha: true }}
       performance={{ min: 0.6 }}
     >
-      <color attach="background" args={['#0a101a']} />
-      <fog attach="fog" args={['#0a101a', 4, 9]} />
+      <fog attach="fog" args={['#0b1420', 4, 9]} />
 
       <ambientLight intensity={0.7} />
       <spotLight position={[2.8, 5, 3]} angle={0.45} penumbra={0.8} intensity={2.4} color="#f4f8ff" />
@@ -180,15 +179,23 @@ function Pill({ children, className }) {
 }
 
 function SectionCard({ id, title, subtitle, children, className = '' }) {
+  const isRight = className.includes('section-right')
+
   return (
-    <section id={id} className="scroll-mt-24 min-h-[68vh] md:min-h-[74vh]">
+    <section
+      id={id}
+      className={cn(
+        'scroll-mt-24 flex min-h-[78vh] items-center',
+        isRight ? 'justify-end' : 'justify-start',
+      )}
+    >
       <motion.article
         initial={{ opacity: 0, y: 26 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.35 }}
         transition={{ duration: 0.55 }}
         className={cn(
-          'rounded-2xl border border-white/15 bg-slate-950/55 p-6 shadow-xl shadow-black/30 backdrop-blur-lg md:p-8',
+          'pointer-events-auto w-full max-w-xl rounded-2xl border border-white/15 bg-slate-950/55 p-6 shadow-xl shadow-black/30 backdrop-blur-lg md:p-8',
           className,
         )}
       >
@@ -284,7 +291,7 @@ function App() {
       <header className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-slate-950/65 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 md:px-8">
           <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/95">
-            <Sparkles size={14} /> Battle Portfolio
+            <Sparkles size={14} /> Charles Pura Portfolio
           </div>
           <nav className="flex flex-wrap justify-end gap-2 md:gap-3">
             {navItems.map((item) => (
@@ -305,90 +312,89 @@ function App() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pb-16 pt-24 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-8">
-        <div className="space-y-6">
-          <SectionCard
-            id="hero"
-            title="Alien Scout"
-            subtitle="Tekken-style cinematic stage: scroll or use the navbar to drive camera movement around the character."
-          >
-            <Pill className="hud-chip mb-3">3D Scroll Camera System</Pill>
-            <p className="hud-title text-2xl font-bold leading-tight text-white md:text-3xl">
-              A game-like portfolio where each section triggers a different character focus.
-            </p>
-            <p className="hud-copy mt-3 max-w-xl text-slate-200/90">
-              Intro = full body, About = face zoom, Tech Stack = tactical side zoom, Projects = feet/lower-body focus.
-            </p>
-            <button
-              onClick={() => jumpTo('projects')}
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-emerald-200"
-            >
-              Start Mission <ArrowRight size={15} />
-            </button>
-          </SectionCard>
+      <div className="pointer-events-none fixed inset-0 top-16 z-10">
+        <Stage activeSection={activeSection} />
+      </div>
 
-          <SectionCard
-            id="about"
-            title="About"
-            subtitle="This section zooms into the face area for a dramatic character-intro vibe."
-          >
-            <p className="max-w-2xl text-slate-200/90">
-              I build immersive web interfaces with cinematic motion, strong art direction, and production-ready React
-              architecture.
-            </p>
-          </SectionCard>
-
-          <SectionCard
-            id="tech"
-            title="Tech Stack"
-            subtitle="Camera shifts to a tighter angle while showing the tools used to build this project."
-          >
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill) => (
-                <Pill key={skill}>{skill}</Pill>
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            id="projects"
-            title="Projects"
-            subtitle="Camera drops lower to highlight the feet/lower-body like a character detail pass."
-          >
-            <div className="grid gap-3">
-              {projects.map((project) => (
-                <article key={project.title} className="rounded-xl border border-white/15 bg-black/25 p-4">
-                  <h3 className="text-lg font-bold text-emerald-200">{project.title}</h3>
-                  <p className="mt-1 text-sm text-slate-200/90">{project.description}</p>
-                </article>
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            id="contact"
-            title="Contact"
-            subtitle="Final camera swing before call-to-action."
-            className="mb-8"
-          >
-            <p className="max-w-xl text-slate-200/90">Let&apos;s build a bold interactive experience together.</p>
-            <a
-              href="mailto:hello@example.com"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200"
-            >
-              <Mail size={15} /> hello@example.com
-            </a>
-          </SectionCard>
-        </div>
-
-        <aside className="lg:sticky lg:top-24 lg:h-[calc(100vh-7.5rem)]">
-          <div className="h-[52vh] overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 shadow-2xl shadow-black/40 md:h-[60vh] lg:h-full">
-            <Stage activeSection={activeSection} />
-          </div>
-          <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-300/80">
-            Active camera target: <span className="font-semibold text-emerald-200">{activeSection}</span>
+      <div className="pointer-events-none relative z-20 mx-auto w-full max-w-7xl px-4 pb-16 pt-24 md:px-8">
+        <SectionCard
+          id="hero"
+          title="Charles Pura"
+          subtitle="Tekken-style cinematic stage: scroll or use the navbar to drive camera movement around the character."
+        >
+          <Pill className="hud-chip mb-3">Created by Charles Pura</Pill>
+          <p className="hud-title text-2xl font-bold leading-tight text-white md:text-3xl">
+            A game-like portfolio where each section triggers a different character focus.
           </p>
-        </aside>
+          <p className="hud-copy mt-3 max-w-xl text-slate-200/90">
+            Intro = full body, About = face zoom, Tech Stack = tactical side zoom, Projects = feet/lower-body focus.
+          </p>
+          <button
+            onClick={() => jumpTo('projects')}
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-emerald-200"
+          >
+            Start Mission <ArrowRight size={15} />
+          </button>
+        </SectionCard>
+
+        <SectionCard
+          id="about"
+          title="About"
+          subtitle="This section zooms into the face area for a dramatic character-intro vibe."
+          className="section-right"
+        >
+          <p className="max-w-2xl text-slate-200/90">
+            I am Charles Pura. I build immersive web interfaces with cinematic motion, strong art direction, and
+            production-ready React architecture.
+          </p>
+        </SectionCard>
+
+        <SectionCard
+          id="tech"
+          title="Tech Stack"
+          subtitle="Camera shifts to a tighter angle while showing the tools used to build this project."
+        >
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <Pill key={skill}>{skill}</Pill>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          id="projects"
+          title="Projects"
+          subtitle="Camera drops lower to highlight the feet/lower-body like a character detail pass."
+          className="section-right"
+        >
+          <div className="grid gap-3">
+            {projects.map((project) => (
+              <article key={project.title} className="rounded-xl border border-white/15 bg-black/25 p-4">
+                <h3 className="text-lg font-bold text-emerald-200">{project.title}</h3>
+                <p className="mt-1 text-sm text-slate-200/90">{project.description}</p>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          id="contact"
+          title="Contact"
+          subtitle="Final camera swing before call-to-action."
+          className="mb-8"
+        >
+          <p className="max-w-xl text-slate-200/90">Let&apos;s build a bold interactive experience together.</p>
+          <a
+            href="mailto:hello@example.com"
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-300 px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200"
+          >
+            <Mail size={15} /> hello@example.com
+          </a>
+        </SectionCard>
+
+        <p className="pointer-events-none mb-4 text-center text-xs uppercase tracking-[0.18em] text-slate-300/80">
+          Active camera target: <span className="font-semibold text-emerald-200">{activeSection}</span>
+        </p>
       </div>
     </main>
   )
