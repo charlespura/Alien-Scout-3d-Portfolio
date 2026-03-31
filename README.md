@@ -7,12 +7,13 @@ The page uses section-driven camera movement so the 3D character changes focus w
 
 - GitHub Pages: `https://charlespura.github.io/Alien-Scout-3d-Portfolio/`
 
-## Tech Stack
+## Tools, Technologies, and Tech Stack
 
 ### Core
 - React 19
 - Vite
 - JavaScript (ESM)
+- Node.js + npm
 
 ### 3D / Animation
 - Three.js
@@ -20,11 +21,22 @@ The page uses section-driven camera movement so the 3D character changes focus w
 - @react-three/drei
 - Framer Motion
 - GSAP
+- GLTF/GLB loading with `useGLTF`
 
 ### Styling / UI
 - Tailwind CSS (v4 via `@tailwindcss/vite`)
 - `clsx` + `tailwind-merge` (for className merging)
 - Lucide React (icons)
+- Google Fonts (`Space Grotesk`, `Syne`)
+
+### Build / Quality
+- ESLint
+- Vite production build pipeline
+
+### Deployment / Hosting
+- GitHub Actions (CI/CD workflow)
+- GitHub Pages (hosting)
+- Pages artifact upload + deploy actions
 
 ## 3D Model
 
