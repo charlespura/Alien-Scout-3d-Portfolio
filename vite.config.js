@@ -8,3 +8,4 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: process.env.GITHUB_ACTIONS && repoName ? `/${repoName}/` : '/',
 })
+
