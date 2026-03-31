@@ -41,6 +41,8 @@ const projects = [
   },
 ]
 
+const modelPath = `${import.meta.env.BASE_URL}models/Meshy_AI_A_Scout_from_an_alien_0331090602_texture.glb`
+
 const stagePresets = {
   hero: {
     camera: [0, 1.35, 4.8],
@@ -75,7 +77,7 @@ const stagePresets = {
 }
 
 function AlienModel({ activeSection }) {
-  const { scene } = useGLTF('/models/Meshy_AI_A_Scout_from_an_alien_0331090602_texture.glb')
+  const { scene } = useGLTF(modelPath)
   const modelRef = useRef(null)
 
   const vectors = useMemo(() => {
@@ -400,6 +402,6 @@ function App() {
   )
 }
 
-useGLTF.preload('/models/Meshy_AI_A_Scout_from_an_alien_0331090602_texture.glb')
+useGLTF.preload(modelPath)
 
 export default App
