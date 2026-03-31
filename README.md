@@ -1,4 +1,6 @@
 # Alien Scout 3D Portfolio
+<img width="800" height="500" alt="Screenshot 2026-03-31 at 8 21 06 PM" src="https://github.com/user-attachments/assets/a332eedd-007a-4083-9673-927e2067a6cc" />
+<img width="800" height="500" alt="Screenshot 2026-03-31 at 8 21 39 PM" src="https://github.com/user-attachments/assets/911ff137-276b-4fb4-8cba-80724071ef4c" />
 
 A cinematic, game-inspired 3D portfolio built with React + Three.js tooling.  
 The page uses section-driven camera movement so the 3D character changes focus while you scroll (`Intro`, `About`, `Tech Stack`, `Projects`, `Contact`).
